@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Millonario Química</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{
+  min-height:100%;
+  background:#06060f;
+  font-family:Arial,sans-serif;
+  touch-action:manipulation;
+  overscroll-behavior:none;
+}
+body{
+  display:flex;
+  justify-content:center;
+  padding:10px;
+}
+#game{
+  width:100%;
+  max-width:860px;
+  background:#0a0a1a;
+  border-radius:16px;
+  border:1px solid rgba(126,200,227,0.2);
+  position:relative;
+  overflow:hidden;
+}
+canvas{
+  position:absolute;top:0;left:0;
+  width:100%;height:100%;
+  pointer-events:none;z-index:0;opacity:0.4;
+}
+.screen{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;
+  align-items:center;
+  padding:28px 14px 28px;
+}
+.hide{display:none!important;}
+
+/* ── INTRO ── */
+.emoji-big{
+  font-size:72px;margin-bottom:10px;
+  animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.t1{
+  font-size:clamp(20px,6vw,30px);
+  font-weight:900;color:#ffd700;
+  text-align:center;margin-bottom:4px;
+  text-shadow:0 0 18px #ffd70055;
+}
+.t2{
+  font-size:clamp(12px,3vw,16px);
+  color:#7ec8e3;text-align:center;
+  letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:22px;
+}
+.btn-start{
+  margin-top:12px;
+  background:linear-gradient(135deg,#ffd700,#ff8c00);
+  color:#0a0a1a;border:none;border-radius:50px;
+  padding:14px 48px;
+  font-size:clamp(16px,4vw,20px);
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 4px 20px #ffd70044;
+  width:100%;max-width:280px;
+}
+.btn-start:active{transform:scale(0.96);}
+
+/* escalera intro */
+.prize-wrap{margin-top:22px;width:100%;display:flex;flex-direction:column;align-items:center;}
+.sec-label{font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.plist{display:flex;flex-direction:column;gap:3px;width:100%;max-width:280px;}
+.pi{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 14px;border-radius:7px;font-size:12px;
+  background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);
+  border:1px solid rgba(255,255,255,0.05);
+}
+.pi.ms{color:#7ec8e3;border-color:rgba(126,200,227,0.2);background:rgba(126,200,227,0.05);}
+.pi.cur{
+  background:rgba(255,215,0,0.18);color:#ffd700;
+  font-weight:900;border:1px solid #ffd70055;
+  font-size:13px;transform:scale(1.04);
+}
+.pi.done{color:#4caf50;border-color:rgba(76,175,80,0.2);background:rgba(76,175,80,0.05);}
+
+/* ── GAME ── */
+#gameScreen{padding:14px 10px 20px;}
+.gtop{
+  display:flex;align-items:center;
+  justify-content:space-between;
+  gap:6px;width:100%;margin-bottom:10px;
+}
+.badge{
+  background:rgba(255,215,0,0.1);
+  border:1px solid #ffd70033;border-radius:20px;
+  padding:4px 12px;font-size:11px;color:#ffd700;
+  font-weight:900;white-space:nowrap;letter-spacing:1px;
+}
+.pts{
+  font-size:clamp(15px,4vw,20px);
+  font-weight:900;color:#ffd700;
+  text-shadow:0 0 8px #ffd70033;white-space:nowrap;
+}
+.btn-ladder{
+  background:rgba(255,255,255,0.07);
+  border:1px solid rgba(126,200,227,0.25);
+  border-radius:9px;padding:5px 10px;
+  color:#7ec8e3;font-size:11px;font-weight:900;
+  cursor:pointer;white-space:nowrap;
+}
+.btn-ladder:active{background:rgba(126,200,227,0.15);}
+
+/* drawer */
+.drawer{
+  display:none;width:100%;
+  background:rgba(0,0,0,0.6);
+  border:1px solid rgba(126,200,227,0.18);
+  border-radius:12px;padding:12px 14px;
+  margin-bottom:10px;
+}
+.drawer.open{display:block;}
+.drawer .plist{max-width:100%;}
+
+/* lifelines */
+.lls{
+  display:flex;gap:7px;margin-bottom:12px;
+  justify-content:center;flex-wrap:wrap;width:100%;
+}
+.ll{
+  background:rgba(255,255,255,0.06);
+  border:1.5px solid rgba(255,215,0,0.35);
+  border-radius:50px;padding:8px 14px;
+  color:#ffd700;font-size:clamp(11px,3vw,13px);
+  font-weight:900;cursor:pointer;
+  display:flex;align-items:center;gap:5px;
+}
+.ll:active:not([disabled]){background:rgba(255,215,0,0.18);}
+.ll[disabled]{opacity:0.25;cursor:default;text-decoration:line-through;}
+
+.qnum{
+  font-size:11px;color:rgba(255,255,255,0.28);
+  text-transform:uppercase;letter-spacing:2px;
+  margin-bottom:7px;text-align:center;
+}
+.qbox{
+  background:rgba(255,255,255,0.04);
+  border:1.5px solid rgba(126,200,227,0.28);
+  border-radius:14px;
+  padding:16px 18px;
+  text-align:center;color:#e8f4f8;
+  font-size:clamp(13px,3.5vw,15px);
+  font-weight:700;line-height:1.5;
+  margin-bottom:14px;width:100%;
+  min-height:78px;
+  display:flex;align-items:center;justify-content:center;
+}
+.ogrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;width:100%;
+}
+@media(max-width:360px){.ogrid{grid-template-columns:1fr;}}
+.opt{
+  background:rgba(255,255,255,0.05);
+  border:1.5px solid rgba(126,200,227,0.2);
+  border-radius:12px;
+  padding:clamp(10px,2.5vw,13px) clamp(9px,2vw,13px);
+  color:#c8e6f0;
+  font-size:clamp(12px,3vw,13px);
+  font-weight:700;cursor:pointer;
+  text-align:left;line-height:1.4;
+  width:100%;
+}
+.opt:active:not([disabled]){
+  background:rgba(126,200,227,0.16);
+  border-color:#7ec8e3;
+}
+.opt .lbl{color:#ffd700;font-weight:900;margin-right:5px;}
+.opt.ok{background:rgba(76,175,80,0.22)!important;border-color:#4caf50!important;color:#a5d6a7!important;}
+.opt.no{background:rgba(244,67,54,0.22)!important;border-color:#f44336!important;color:#ef9a9a!important;}
+.opt.show{background:rgba(76,175,80,0.14)!important;border-color:#4caf5077!important;}
+
+.fb{
+  margin-top:11px;
+  font-size:clamp(12px,3vw,13px);
+  font-weight:700;min-height:20px;
+  text-align:center;line-height:1.4;
+  padding:0 4px;width:100%;
+}
+.abts{
+  display:flex;flex-direction:column;
+  align-items:center;gap:8px;
+  margin-top:11px;width:100%;
+}
+.btn-next{
+  background:linear-gradient(135deg,#ffd700,#ff8c00);
+  color:#0a0a1a;border:none;border-radius:50px;
+  padding:12px 36px;
+  font-size:clamp(14px,3.5vw,16px);
+  font-weight:900;cursor:pointer;
+  width:100%;max-width:300px;
+}
+.btn-next:active{transform:scale(0.97);}
+.btn-quit{
+  background:transparent;
+  border:1.5px solid rgba(255,100,100,0.35);
+  border-radius:50px;padding:9px 28px;
+  font-size:clamp(12px,3vw,13px);
+  font-weight:700;color:#ff8080;cursor:pointer;
+  width:100%;max-width:300px;
+}
+.btn-quit:active{background:rgba(255,100,100,0.1);}
+
+/* desktop sidebar */
+@media(min-width:620px){
+  #gameScreen{padding:22px 18px 26px;}
+  .glayout{display:flex;gap:18px;align-items:flex-start;width:100%;}
+  .maincol{flex:1;display:flex;flex-direction:column;align-items:center;}
+  .sidecol{width:180px;flex-shrink:0;}
+  .sidecol .plist{max-width:100%;}
+  .btn-ladder{display:none;}
+  .drawer{display:none!important;}
+}
+@media(max-width:619px){
+  .sidecol{display:none;}
+  .glayout{display:block;}
+  .maincol{display:contents;}
+}
+
+/* ── RESULT ── */
+#resultScreen{justify-content:center;min-height:400px;}
+.r-icon{font-size:clamp(60px,14vw,82px);margin-bottom:12px;animation:pop .5s cubic-bezier(.175,.885,.32,1.275);}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.r-title{
+  font-size:clamp(20px,5.5vw,28px);
+  font-weight:900;color:#ffd700;
+  text-shadow:0 0 16px #ffd70044;
+  margin-bottom:8px;text-align:center;
+}
+.r-pts{
+  font-size:clamp(26px,7vw,38px);
+  font-weight:900;color:#fff;
+  text-shadow:0 0 18px #ffd70055;
+  margin-bottom:8px;
+}
+.r-msg{
+  font-size:clamp(13px,3.2vw,14px);
+  color:#7ec8e3;text-align:center;
+  margin-bottom:22px;max-width:320px;
+  line-height:1.5;padding:0 6px;
+}
+.btn-again{
+  background:rgba(255,215,0,0.12);
+  border:2px solid #ffd700;border-radius:50px;
+  padding:12px 38px;color:#ffd700;
+  font-size:clamp(15px,4vw,17px);
+  font-weight:900;cursor:pointer;
+  width:100%;max-width:280px;
+}
+.btn-again:active{background:rgba(255,215,0,0.22);transform:scale(0.97);}
+</style>
+</head>
+<body>
+<div id="game">
+<canvas id="bg"></canvas>
+
+<!-- INTRO -->
+<div class="screen" id="introScreen">
+  <div class="emoji-big">⚗️</div>
+  <div class="t1">¿Quién Quiere Ser</div>
+  <div class="t1" style="color:#7ec8e3;font-size:clamp(16px,4.5vw,24px);">Millonario en Química?</div>
+  <div class="t2">Alcanos · Membranas · Enlace Carbono</div>
+  <button class="btn-start" id="btnStart">¡Comenzar! 🧪</button>
+  <div class="prize-wrap">
+    <div class="sec-label">Escalera de Premios</div>
+    <div class="plist" id="iPrizes"></div>
+  </div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen hide" id="gameScreen">
+  <div class="glayout">
+    <div class="maincol">
+      <div class="gtop">
+        <div class="badge" id="lvlBadge">Nivel 1</div>
+        <div class="pts"   id="ptsDisp">💰 100 pts</div>
+        <button class="btn-ladder" id="btnLadder">🏆 Premios</button>
+      </div>
+      <div class="drawer" id="drawer">
+        <div class="sec-label">Escalera</div>
+        <div class="plist" id="dPrizes"></div>
+      </div>
+      <div class="lls">
+        <button class="ll" id="ll50">✂️ 50:50</button>
+        <button class="ll" id="llEx">🧑‍🔬 Experto</button>
+        <button class="ll" id="llPub">👥 Público</button>
+      </div>
+      <div class="qnum"  id="qNum">Pregunta 1 de 16</div>
+      <div class="qbox"  id="qBox">…</div>
+      <div class="ogrid" id="oGrid"></div>
+      <div class="fb"    id="fb"></div>
+      <div class="abts">
+        <button class="btn-next hide" id="btnNext">Siguiente →</button>
+        <button class="btn-quit"      id="btnQuit">Retirarme con lo ganado</button>
+      </div>
+    </div>
+    <div class="sidecol">
+      <div class="sec-label">Premios</div>
+      <div class="plist" id="sPrizes"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen hide" id="resultScreen">
+  <div class="r-icon"  id="rIcon">🏆</div>
+  <div class="r-title" id="rTitle">¡Felicidades!</div>
+  <div class="r-pts"   id="rPts">1,000,000 pts</div>
+  <div class="r-msg"   id="rMsg"></div>
+  <button class="btn-again" id="btnAgain">🔄 Jugar de nuevo</button>
+</div>
+</div>
+
+<script>
+/* ====== DATOS ====== */
+var P=[
+  {p:'100',m:0},{p:'200',m:0},{p:'300',m:0},{p:'500',m:0},
+  {p:'1,000',m:1},{p:'2,000',m:0},{p:'4,000',m:0},{p:'8,000',m:0},{p:'16,000',m:0},
+  {p:'32,000',m:1},{p:'64,000',m:0},{p:'125,000',m:0},{p:'250,000',m:0},{p:'500,000',m:0},{p:'750,000',m:0},
+  {p:'1,000,000',m:1}
+];
+var Q=[
+  {q:'¿Qué es un hidrocarburo saturado y qué tipo de enlace lo caracteriza?',
+   o:['Compuesto con dobles enlaces C=C entre carbonos','Compuesto de C y H con solo enlaces simples C–C de tipo sigma (σ)','Compuesto con al menos un triple enlace C≡C','Compuesto formado únicamente por átomos de oxígeno'],
+   a:1,e:'Los alcanos son hidrocarburos saturados con enlace simple sigma (σ) entre carbonos.'},
+  {q:'¿Qué permite la libre rotación en los alcanos?',
+   o:['El doble enlace C=C rígido','La presencia de átomos de nitrógeno','El enlace simple C–C que permite isomería conformacional','Los puentes de hidrógeno entre moléculas'],
+   a:2,e:'El enlace simple C–C permite rotación libre, originando isomería conformacional.'},
+  {q:'¿Por qué los alcanos son compuestos apolares?',
+   o:['Porque tienen grupos –OH que equilibran las cargas','Porque los enlaces C–C y C–H tienen diferencia de electronegatividad muy baja','Porque siempre tienen estructura cíclica','Porque contienen halógenos en su estructura'],
+   a:1,e:'Los enlaces C–C y C–H tienen diferencia de electronegatividad muy baja, impidiendo dipolos permanentes.'},
+  {q:'¿Por qué la combustión de los alcanos libera gran cantidad de energía?',
+   o:['Porque absorben energía en un proceso endotérmico','Porque forman nuevos enlaces C–C más estables','Porque se rompen enlaces C–H y C–C para formar C=O y O–H más estables','Porque reaccionan con el nitrógeno del aire'],
+   a:2,e:'Se rompen enlaces C–H y C–C para formar C=O y O–H en CO₂ y H₂O, liberando energía.'},
+  {q:'¿En qué consiste la halogenación radicalaria de los alcanos?',
+   o:['Un halógeno reemplaza un hidrógeno mediante radicales libres','Un halógeno se suma a un doble enlace en condiciones ácidas','El alcano se oxida completamente a CO₂ con halógenos','Dos alcanos se unen mediante un átomo de halógeno'],
+   a:0,e:'Es una reacción de sustitución donde un H es reemplazado por un halógeno vía radicales libres.'},
+  {q:'¿Qué diferencia estructural hay entre una cadena saturada y una insaturada?',
+   o:['La insaturada es más larga que la saturada','La saturada tiene solo enlaces simples y es recta; la insaturada tiene al menos un doble enlace que genera curvatura','La saturada tiene anillos y la insaturada es lineal','No hay diferencia estructural, solo de reactividad'],
+   a:1,e:'La cadena saturada solo tiene enlaces simples (recta); la insaturada tiene doble enlace que genera curvatura.'},
+  {q:'¿Por qué las cadenas saturadas se empaquetan mejor que las insaturadas?',
+   o:['Porque tienen mayor polaridad y se atraen eléctricamente','Porque son lineales y pueden alinearse estrechamente, aumentando fuerzas de Van der Waals','Porque los dobles enlaces crean huecos entre cadenas','Porque tienen menor masa molecular'],
+   a:1,e:'Las cadenas lineales se alinean estrechamente, maximizando las fuerzas de Van der Waals.'},
+  {q:'¿Cómo influye la saturación en la fluidez de la membrana celular?',
+   o:['Más saturación → mayor fluidez; más insaturación → rigidez','La saturación no afecta la fluidez de la membrana','Más saturación → más rigidez; más insaturación → mayor fluidez','Solo el colesterol controla la fluidez'],
+   a:2,e:'Más saturación = más rigidez. Más insaturación = mayor fluidez.'},
+  {q:'¿Qué relación existe entre empaquetamiento de lípidos y rigidez de membrana?',
+   o:['A menor empaquetamiento, mayor rigidez','El empaquetamiento no tiene relación con la rigidez','Mayor empaquetamiento genera mayor rigidez y menor fluidez','Mayor empaquetamiento siempre mejora el transporte'],
+   a:2,e:'Mayor empaquetamiento de los lípidos genera mayor rigidez y menor fluidez en la membrana.'},
+  {q:'¿Qué es una bicapa fosfolipídica?',
+   o:['Una proteína transmembranal que controla el transporte iónico','Estructura de fosfolípidos en dos capas: cabezas hidrofílicas al exterior y colas hidrofóbicas al interior','Una capa simple de lípidos que rodea el núcleo','Un polímero de glucosa que forma la pared celular'],
+   a:1,e:'La bicapa fosfolipídica tiene cabezas hidrofílicas al exterior y colas hidrofóbicas al interior.'},
+  {q:'¿Qué significa que una membrana sea selectivamente permeable?',
+   o:['Que es completamente impermeable a todas las sustancias','Que permite el paso de cualquier molécula sin restricción','Que permite el paso de algunas sustancias y restringe otras según tamaño, polaridad o carga','Que solo deja pasar el agua a alta presión'],
+   a:2,e:'La permeabilidad selectiva permite el paso de ciertas sustancias según tamaño, polaridad o carga.'},
+  {q:'¿Qué son las ceras vegetales y de qué están formadas principalmente?',
+   o:['Polisacáridos estructurales como la celulosa','Proteínas de membrana con función de transporte','Mezclas de compuestos hidrofóbicos, principalmente alcanos de cadena larga que forman la cutícula','Pigmentos fotosintéticos en los cloroplastos'],
+   a:2,e:'Las ceras vegetales son mezclas de alcanos de cadena larga, altamente hidrofóbicos, que forman la cutícula.'},
+  {q:'¿Cuál es la función principal de la cutícula vegetal?',
+   o:['Captar la luz solar para la fotosíntesis','Reducir la pérdida de agua y proteger frente a factores ambientales','Absorber minerales del suelo por difusión','Almacenar glucosa como reserva energética'],
+   a:1,e:'La cutícula vegetal reduce la pérdida de agua y protege a la planta de factores ambientales.'},
+  {q:'¿Por qué las ceras vegetales son altamente hidrofóbicas?',
+   o:['Porque contienen grupos –OH que rechazan el agua','Porque tienen carga negativa que repele el agua','Porque están formadas por largas cadenas hidrocarbonadas saturadas no polares','Porque su alta temperatura de fusión las hace repeler líquidos'],
+   a:2,e:'Las largas cadenas hidrocarbonadas saturadas no polares les confieren su carácter hidrofóbico.'},
+  {q:'¿Cómo se conecta la estabilidad del enlace C–C con la supervivencia vegetal?',
+   o:['Permite que las plantas realicen fotosíntesis más eficientemente','Su estabilidad permite formar cadenas largas que estructuran membranas y ceras protectoras','Facilita la absorción de CO₂ a través de los estomas','Contribuye a la síntesis de clorofila'],
+   a:1,e:'La estabilidad del enlace C–C permite formar cadenas largas que estructuran membranas y ceras protectoras.'},
+  {q:'¿Cómo influye la longitud de la cadena hidrocarbonada en las propiedades físicas de un alcano y su función biológica?',
+   o:['A mayor longitud, disminuye el punto de ebullición y la rigidez','La longitud no tiene efecto en las propiedades físicas ni biológicas','A mayor longitud, aumentan fuerzas de London, sube el punto de ebullición y favorece empaquetamiento para rigidez en membranas y ceras','A mayor longitud el alcano se vuelve más polar'],
+   a:2,e:'Mayor longitud → mayores fuerzas de London → mayor punto de ebullición y empaquetamiento → rigidez en membranas y ceras.'}
+];
+
+/* ====== ESTADO ====== */
+var cq=0, lls={f:1,e:1,p:1}, elim=[], done=false, active=false, drawerOpen=false;
+
+/* ====== HELPERS ====== */
+function $id(id){return document.getElementById(id);}
+function mIdx(i){return i<4?0:i<9?4:i<14?9:14;}
+
+function buildList(id,cur){
+  var c=$id(id); if(!c)return;
+  c.innerHTML='';
+  for(var i=P.length-1;i>=0;i--){
+    var d=document.createElement('div');
+    d.className='pi'+(P[i].m?' ms':'')+(i===cur?' cur':i<cur?' done':'');
+    d.innerHTML='<span style="opacity:.4;margin-right:8px;font-size:11px;">'+(i+1)+'.</span><span>'+P[i].p+' pts</span>';
+    c.appendChild(d);
+  }
+}
+
+/* ====== EVENTOS ====== */
+function addTap(el,fn){
+  if(!el)return;
+  el.addEventListener('touchend',function(e){e.preventDefault();fn();},{passive:false});
+  el.addEventListener('click',fn);
+}
+
+/* ====== INICIO ====== */
+function startGame(){
+  cq=0;lls={f:1,e:1,p:1};elim=[];done=false;active=true;drawerOpen=false;
+  $id('introScreen').classList.add('hide');
+  $id('gameScreen').classList.remove('hide');
+  loadQ();
+}
+
+function loadQ(){
+  done=false;elim=[];drawerOpen=false;
+  $id('drawer').classList.remove('open');
+  $id('fb').textContent='';
+  $id('fb').style.color='#ffd700';
+  $id('btnNext').classList.add('hide');
+  $id('btnQuit').style.display='';
+
+  var q=Q[cq];
+  $id('lvlBadge').textContent='Nivel '+(cq+1);
+  $id('ptsDisp').textContent='💰 '+P[cq].p+' pts';
+  $id('qNum').textContent='Pregunta '+(cq+1)+' de '+Q.length;
+  $id('qBox').textContent=q.q;
+
+  buildList('sPrizes',cq);
+  buildList('dPrizes',cq);
+
+  var g=$id('oGrid'); g.innerHTML='';
+  var labs=['A','B','C','D'];
+  for(var i=0;i<4;i++){
+    (function(idx){
+      var b=document.createElement('button');
+      b.className='opt'; b.id='o'+idx;
+      b.innerHTML='<span class="lbl">'+labs[idx]+')</span>'+q.o[idx];
+      addTap(b,function(){pick(idx);});
+      g.appendChild(b);
+    })(i);
+  }
+
+  $id('ll50').disabled =!lls.f;
+  $id('llEx').disabled =!lls.e;
+  $id('llPub').disabled=!lls.p;
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function pick(idx){
+  if(done||elim.indexOf(idx)>-1)return;
+  done=true;
+  var q=Q[cq];
+  var btns=document.querySelectorAll('.opt');
+  for(var i=0;i<btns.length;i++) btns[i].disabled=true;
+
+  if(idx===q.a){
+    $id('o'+idx).classList.add('ok');
+    $id('fb').textContent='✅ ¡Correcto! '+q.e;
+    $id('fb').style.color='#4caf50';
+    if(cq===Q.length-1){ setTimeout(function(){showResult('win');},1800); }
+    else { $id('btnNext').classList.remove('hide'); }
+  } else {
+    $id('o'+idx).classList.add('no');
+    $id('o'+q.a).classList.add('show');
+    $id('fb').textContent='❌ Incorrecto. Respuesta: '+['A','B','C','D'][q.a]+') — '+q.e;
+    $id('fb').style.color='#f44336';
+    $id('btnQuit').style.display='none';
+    setTimeout(function(){showResult('lose');},2400);
+  }
+}
+
+function nextQ(){ cq++; loadQ(); }
+
+function quit(){
+  if(!active||done)return;
+  showResult('quit');
+}
+
+function showResult(type){
+  active=false;
+  $id('gameScreen').classList.add('hide');
+  $id('resultScreen').classList.remove('hide');
+  if(type==='win'){
+    $id('rIcon').textContent='🏆';
+    $id('rTitle').textContent='¡MILLONARIO!';
+    $id('rPts').textContent=P[Q.length-1].p+' pts';
+    $id('rMsg').textContent='¡Respondiste las 16 preguntas! Eres un experto en química orgánica.';
+  } else if(type==='quit'){
+    var e=cq>0?P[cq-1].p:'0';
+    $id('rIcon').textContent='💼';
+    $id('rTitle').textContent='¡Te retiraste!';
+    $id('rPts').textContent=e+' pts';
+    $id('rMsg').textContent='¡Decisión inteligente! Te llevas los puntos acumulados.';
+  } else {
+    var mi=mIdx(cq); var g=cq>mi?P[mi].p:'0';
+    $id('rIcon').textContent='💔';
+    $id('rTitle').textContent='Respuesta incorrecta';
+    $id('rPts').textContent=g+' pts';
+    $id('rMsg').textContent='Gracias al nivel de seguridad, te llevas '+g+' pts garantizados.';
+  }
+}
+
+function resetGame(){
+  $id('resultScreen').classList.add('hide');
+  $id('introScreen').classList.remove('hide');
+  buildList('iPrizes',-1);
+}
+
+/* ── COMODINES ── */
+function do50(){
+  if(!lls.f||done)return; lls.f=0; $id('ll50').disabled=true;
+  var q=Q[cq],wr=[],i;
+  for(i=0;i<4;i++) if(i!==q.a) wr.push(i);
+  wr.sort(function(){return Math.random()-.5;}).slice(0,2).forEach(function(i){
+    elim.push(i);
+    var b=$id('o'+i); b.style.opacity='.14'; b.style.pointerEvents='none';
+  });
+}
+function doEx(){
+  if(!lls.e||done)return; lls.e=0; $id('llEx').disabled=true;
+  var q=Q[cq],msg;
+  if(Math.random()<.82){
+    msg='🧑‍🔬 Experto: "Estoy seguro de que es '+['A','B','C','D'][q.a]+')"';
+  } else {
+    var d=[0,1,2,3].filter(function(i){return i!==q.a;})[Math.floor(Math.random()*3)];
+    msg='🧑‍🔬 Experto: "Podría ser '+['A','B','C','D'][d]+') o '+['A','B','C','D'][q.a]+')… no estoy seguro"';
+  }
+  $id('fb').textContent=msg; $id('fb').style.color='#7ec8e3';
+}
+function doPub(){
+  if(!lls.p||done)return; lls.p=0; $id('llPub').disabled=true;
+  var q=Q[cq],dist=[0,0,0,0],rem,i;
+  dist[q.a]=Math.floor(Math.random()*20)+55; rem=100-dist[q.a];
+  var others=[0,1,2,3].filter(function(x){return x!==q.a;});
+  others.forEach(function(x,j){
+    if(j===others.length-1){dist[x]=rem;}
+    else{var v=Math.floor(Math.random()*Math.min(rem-(others.length-j-1),16)+1);dist[x]=v;rem-=v;}
+  });
+  $id('fb').textContent='👥 Público: A:'+dist[0]+'%  B:'+dist[1]+'%  C:'+dist[2]+'%  D:'+dist[3]+'%';
+  $id('fb').style.color='#9c88ff';
+}
+
+function toggleDrawer(){
+  drawerOpen=!drawerOpen;
+  var d=$id('drawer');
+  if(drawerOpen){ d.classList.add('open'); buildList('dPrizes',cq); }
+  else d.classList.remove('open');
+}
+
+/* ====== EVENTOS BOTONES ====== */
+window.addEventListener('DOMContentLoaded',function(){
+  addTap($id('btnStart'),  startGame);
+  addTap($id('btnNext'),   nextQ);
+  addTap($id('btnQuit'),   quit);
+  addTap($id('btnAgain'),  resetGame);
+  addTap($id('btnLadder'), toggleDrawer);
+  addTap($id('ll50'),  do50);
+  addTap($id('llEx'),  doEx);
+  addTap($id('llPub'), doPub);
+  buildList('iPrizes',-1);
+
+  /* canvas bg */
+  var cv=$id('bg'), cx=cv.getContext('2d');
+  var syms=['H₂','O','C','Na','NH₃','CH₄','CO₂','H₂O','⬡','e⁻','K⁺','Fe'];
+  var cols=['#7ec8e3','#ffd700','#9c88ff','#4caf50','#ff8c00','#e040fb'];
+  var pts=[];
+  function resize(){
+    var g=$id('game');
+    cv.width=g.offsetWidth; cv.height=g.offsetHeight;
+  }
+  function init(){
+    pts=[];
+    for(var i=0;i<22;i++){
+      pts.push({
+        x:Math.random()*cv.width, y:Math.random()*cv.height,
+        vx:(Math.random()-.5)*.35, vy:(Math.random()-.5)*.35,
+        a:Math.random()*.22+.04, sz:Math.random()*4+8,
+        s:syms[Math.floor(Math.random()*syms.length)],
+        c:cols[Math.floor(Math.random()*cols.length)]
+      });
+    }
+  }
+  function draw(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    for(var i=0;i<pts.length;i++){
+      var p=pts[i];
+      cx.save(); cx.globalAlpha=p.a; cx.fillStyle=p.c;
+      cx.font=p.sz+'px Arial,sans-serif';
+      cx.fillText(p.s,p.x,p.y); cx.restore();
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<-30) p.x=cv.width+5;
+      if(p.x>cv.width+30) p.x=-5;
+      if(p.y<-20) p.y=cv.height+5;
+      if(p.y>cv.height+20) p.y=-5;
+    }
+    requestAnimationFrame(draw);
+  }
+  resize(); init(); draw();
+  window.addEventListener('resize',function(){resize();init();});
+});
+</script>
+</body>
+</html>
